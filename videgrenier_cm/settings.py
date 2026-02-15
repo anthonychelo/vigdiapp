@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ─── Sécurité ────────────────────────────────────────────────────────────────
 SECRET_KEY    = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 DEBUG         = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('vigdi2.onrender.com', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('vigdiapp.onrender.com', default='localhost,127.0.0.1', cast=Csv())
 
 # ─── Applications ─────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -106,19 +106,16 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ─── Stockage des médias ──────────────────────────────────────────────────────
+# ─── Stockage des médias ──────────────────────────────────────────────────────
 MEDIA_STORAGE = config('MEDIA_STORAGE', default='local')
 
-if MEDIA_STORAGE == 's3':
-    DEFAULT_FILE_STORAGE    = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_ACCESS_KEY_ID       = config('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY   = config('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='vigdi-media')
-    AWS_S3_REGION_NAME      = config('AWS_S3_REGION_NAME', default='eu-west-1')
-    AWS_DEFAULT_ACL         = 'public-read'
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_LOCATION = 'media'
-    MEDIA_URL  = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/'
-    MEDIA_ROOT = ''
+if MEDIA_STORAGE == 'cloudinary':
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+        'API_KEY': config('CLOUDINARY_API_KEY'),
+        'API_SECRET': config('CLOUDINARY_API_SECRET')
+    }
 else:
     MEDIA_URL  = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
