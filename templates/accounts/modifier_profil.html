@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Modifier mon profil{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:600px;">
+  <h3 class="fw-bold mb-4"><i class="bi bi-pencil me-2"></i>Modifier mon profil</h3>
+
+  <div class="card border-0 shadow-sm rounded-4 p-4">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <!-- Photo de profil actuelle -->
+      <div class="text-center mb-4">
+        {% if user.photo_profil %}
+          <img src="{{ user.photo_profil.url }}"
+               id="avatar-preview"
+               style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--indigo);">
+        {% else %}
+          <div id="avatar-preview-placeholder"
+               style="width:100px;height:100px;border-radius:50%;background:var(--indigo);
+                      color:white;font-size:2rem;font-weight:700;display:flex;
+                      align-items:center;justify-content:center;margin:0 auto;">
+            {{ user.first_name|first|upper|default:user.username|first|upper }}
+          </div>
+        {% endif %}
+        <div class="mt-2">
+          <label for="id_photo_profil" class="btn btn-sm btn-outline-primary rounded-pill">
+            <i class="bi bi-camera me-1"></i> Changer la photo
+          </label>
+          <input type="file" id="id_photo_profil" name="photo_profil"
+                 accept="image/*" class="d-none" onchange="previewPhoto(this)">
+        </div>
+      </div>
+
+      <div class="row g-3">
+        {% for field in form %}
+          {% if field.html_name != 'photo_profil' %}
+            <div class="{% if field.html_name in 'first_name,last_name' %}col-6{% else %}col-12{% endif %}">
+              <label class="form-label fw-medium">{{ field.label }}</label>
+              {% if field.html_name == 'region' %}
+                <select name="{{ field.html_name }}"
+                        class="form-select rounded-3 {% if field.errors %}is-invalid{% endif %}">
+                  <option value="">-- Région --</option>
+                  {% for val, label in field.field.choices %}
+                    <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              {% elif field.html_name == 'bio' %}
+                <textarea name="{{ field.html_name }}"
+                          class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                          rows="3" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">{{ field.value|default:'' }}</textarea>
+              {% else %}
+                <input type="{{ field.field.widget.input_type }}"
+                       name="{{ field.html_name }}"
+                       class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                       value="{{ field.value|default:'' }}">
+              {% endif %}
+              {% if field.errors %}
+                <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 mt-4 fw-bold rounded-3"
+              style="background:var(--indigo);border-color:var(--indigo);">
+        <i class="bi bi-check-lg me-2"></i>Sauvegarder les modifications
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      // Supprimer le placeholder texte si présent
+      const placeholder = document.getElementById('avatar-preview-placeholder');
+      if (placeholder) placeholder.remove();
+      // Créer ou mettre à jour l'image
+      let img = document.getElementById('avatar-preview');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'avatar-preview';
+        img.style = 'width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--indigo);';
+        input.closest('.text-center').insertBefore(img, input.closest('.mt-2'));
+      }
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Inscription – ViGDiM{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:560px;">
+  <div class="card border-0 shadow-lg rounded-4 p-4">
+    <div class="text-center mb-4">
+      <div style="font-size:3rem;">✨</div>
+      <h2 class="fw-bold">Créer un compte</h2>
+      <p class="text-muted small">Rejoignez la communauté ViGDiM</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="row g-3">
+        {% for field in form %}
+          <div class="{% if field.html_name in 'first_name,last_name' %}col-6{% else %}col-12{% endif %}">
+            <label class="form-label fw-medium">{{ field.label }}</label>
+            {% if field.field.widget.input_type == 'select' or field.html_name == 'region' %}
+              <select name="{{ field.html_name }}"
+                      class="form-select rounded-3 {% if field.errors %}is-invalid{% endif %}">
+                {% for val, label in field.field.choices %}
+                  <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <input type="{{ field.field.widget.input_type }}"
+                     name="{{ field.html_name }}"
+                     class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                     placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
+                     value="{{ field.value|default:'' }}">
+            {% endif %}
+            {% if field.errors %}
+              <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+            {% endif %}
+            {% if field.help_text %}
+              <small class="text-muted">{{ field.help_text }}</small>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold rounded-3 mt-4"
+              style="background:var(--indigo);border-color:var(--indigo);">
+        <i class="bi bi-person-plus me-2"></i>Créer mon compte
+      </button>
+    </form>
+    <hr>
+    <p class="text-center mb-0">
+      Déjà un compte ?
+      <a href="{% url 'accounts:connexion' %}" class="fw-bold text-decoration-none">Se connecter</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

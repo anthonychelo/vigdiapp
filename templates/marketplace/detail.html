@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}{{ article.titre }} – ViGDiM{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+
+    <!-- Photos -->
+    <div class="col-lg-7">
+      {% if article.photos.all %}
+        <!-- Carousel Bootstrap -->
+        <div id="carouselPhotos" class="carousel slide rounded-4 overflow-hidden shadow-sm" data-bs-ride="carousel">
+          <div class="carousel-inner">
+            {% for photo in article.photos.all %}
+              <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <img src="{{ photo.image.url }}" class="d-block w-100"
+                     style="height:420px;object-fit:contain;background:#f1f5f9;" alt="Photo {{ forloop.counter }}">
+              </div>
+            {% endfor %}
+          </div>
+          {% if article.photos.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselPhotos" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselPhotos" data-bs-slide="next">
+              <span class="carousel-control-next-icon"></span>
+            </button>
+          {% endif %}
+        </div>
+        <!-- Miniatures -->
+        <div class="d-flex gap-2 mt-2 flex-wrap">
+          {% for photo in article.photos.all %}
+            <img src="{{ photo.image.url }}"
+                 style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;"
+                 onclick="document.querySelector('#carouselPhotos .carousel-item:nth-child({{ forloop.counter }})').scrollIntoView()">
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="d-flex align-items-center justify-content-center bg-light rounded-4"
+             style="height:400px;font-size:5rem;">📦</div>
+      {% endif %}
+    </div>
+
+    <!-- Détails -->
+    <div class="col-lg-5">
+      <!-- Vendeur avec badge style Instagram -->
+      <div class="d-flex align-items-center gap-3 mb-3">
+        {% with u=article.vendeur taille=46 font="1.1rem" badge_sz=18 %}
+          {% include 'partials/avatar.html' %}
+        {% endwith %}
+        <div>
+          <div class="d-flex align-items-center gap-1">
+            <a href="{% url 'accounts:profil_utilisateur' article.vendeur.pk %}"
+               class="fw-bold text-decoration-none text-dark">
+              {{ article.vendeur.get_full_name|default:article.vendeur.username }}
+            </a>
+            {% include 'partials/badge_inline.html' with u=article.vendeur %}
+          </div>
+          <div class="text-warning small">
+            {% for i in "12345" %}
+              {% if forloop.counter <= article.vendeur.note_moyenne|floatformat:"0"|add:"0" %}⭐{% else %}☆{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Titre & prix -->
+      <h3 class="fw-bold">{{ article.titre }}</h3>
+      <div class="mb-3">
+        <span class="badge rounded-pill me-2
+          {% if article.type_transaction == 'echanger' %}bg-success
+          {% elif article.type_transaction == 'don' %}bg-warning text-dark
+          {% else %}bg-primary{% endif %}">
+          {% if article.type_transaction == 'echanger' %}🔄 Échange
+          {% elif article.type_transaction == 'don' %}🎁 Don
+          {% else %}💰 Vente{% endif %}
+        </span>
+        <span class="badge bg-light text-muted">{{ article.get_condition_display }}</span>
+      </div>
+
+      {% if article.type_transaction != 'don' %}
+        <h2 class="fw-bold mb-3" style="color:var(--indigo);">
+          {{ article.prix|floatformat:"0" }} <small class="fs-5 fw-normal text-muted">FCFA</small>
+        </h2>
+      {% else %}
+        <h2 class="fw-bold mb-3 text-success">Gratuit <small class="fs-5 fw-normal text-muted">(Don)</small></h2>
+      {% endif %}
+
+      <p class="text-muted mb-3">{{ article.description }}</p>
+
+      <div class="small text-muted mb-4">
+        <i class="bi bi-geo-alt me-1"></i>{{ article.ville|default:"Cameroun" }}
+        {% if article.region %}, {{ article.region }}{% endif %}
+        &nbsp;·&nbsp;
+        <i class="bi bi-eye me-1"></i>{{ article.vues }} vues
+        &nbsp;·&nbsp;
+        <i class="bi bi-clock me-1"></i>{{ article.created_at|timesince }} ago
+      </div>
+
+      <!-- Statut -->
+      {% if article.statut != 'disponible' %}
+        <div class="alert alert-warning">
+          <i class="bi bi-lock me-2"></i>
+          Cet article n'est plus disponible ({{ article.get_statut_display }}).
+        </div>
+      {% endif %}
+
+      <!-- ── Actions selon situation ───────────────── -->
+      {% if user.is_authenticated and article.statut == 'disponible' %}
+
+        {% if article.vendeur == user %}
+          <!-- Mes propres articles -->
+          <div class="d-grid gap-2">
+            <a href="{% url 'marketplace:modifier' article.pk %}" class="btn btn-outline-primary rounded-3">
+              <i class="bi bi-pencil me-2"></i>Modifier l'annonce
+            </a>
+            <a href="{% url 'marketplace:supprimer' article.pk %}" class="btn btn-outline-danger rounded-3">
+              <i class="bi bi-trash me-2"></i>Retirer l'annonce
+            </a>
+          </div>
+
+        {% elif article.type_transaction == 'echanger' %}
+          <!-- ÉCHANGE : Proposer son livre -->
+          {% if ma_demande %}
+            <div class="alert alert-info rounded-3">
+              <i class="bi bi-hourglass me-2"></i>
+              Votre proposition d'échange est {{ ma_demande.get_statut_display|lower }}.
+            </div>
+          {% else %}
+            <div class="card border-success rounded-4 p-3 mb-3">
+              <h6 class="fw-bold text-success mb-3">
+                <i class="bi bi-arrow-left-right me-2"></i>Proposer un échange
+              </h6>
+              <form method="post" action="{% url 'marketplace:demande_echange' article.pk %}"
+                    enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                <div class="mb-2">
+                  <input type="text" name="titre_livre" class="form-control form-control-sm rounded-3"
+                         placeholder="Titre de votre livre *" required>
+                </div>
+                <div class="mb-2">
+                  <textarea name="description_livre" rows="2"
+                            class="form-control form-control-sm rounded-3"
+                            placeholder="État, auteur, édition..."></textarea>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label small fw-medium text-success">
+                    📷 Photo de votre livre (obligatoire)
+                  </label>
+                  <input type="file" name="photo_livre" class="form-control form-control-sm rounded-3"
+                         accept="image/*" required>
+                </div>
+                <div class="mb-3">
+                  <textarea name="message" rows="1"
+                            class="form-control form-control-sm rounded-3"
+                            placeholder="Message au vendeur (optionnel)"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success w-100 fw-bold rounded-3">
+                  <i class="bi bi-send me-2"></i>Envoyer ma proposition
+                </button>
+              </form>
+            </div>
+          {% endif %}
+
+        {% else %}
+          <!-- Vente/Don : contacter le vendeur -->
+          <div class="d-grid gap-2">
+            <a href="{% url 'messaging:demarrer_article' article.vendeur.pk article.pk %}"
+               class="btn btn-primary fw-bold rounded-3"
+               style="background:var(--indigo);border-color:var(--indigo);">
+              <i class="bi bi-chat me-2"></i>Contacter le vendeur
+            </a>
+          </div>
+        {% endif %}
+
+      {% elif not user.is_authenticated %}
+        <a href="{% url 'accounts:connexion' %}?next={{ request.path }}"
+           class="btn btn-primary w-100 fw-bold rounded-3">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Connexion pour contacter
+        </a>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Évaluations du vendeur -->
+  {% if evaluations %}
+    <div class="mt-5">
+      <h5 class="fw-bold mb-3">Avis sur le vendeur</h5>
+      <div class="row g-3">
+        {% for eval in evaluations %}
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="text-warning">{% for i in "12345" %}{% if forloop.counter <= eval.note %}⭐{% else %}☆{% endif %}{% endfor %}</span>
+                <span class="small text-muted">{{ eval.acheteur.get_full_name|default:eval.acheteur.username }}</span>
+                {% if eval.acheteur.afficher_badge %}
+                  <span>{{ eval.acheteur.badge.icone }}</span>
+                {% endif %}
+              </div>
+              {% if eval.commentaire %}
+                <p class="small text-muted mb-0">{{ eval.commentaire }}</p>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

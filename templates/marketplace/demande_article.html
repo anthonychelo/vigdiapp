@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Demander un article{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:600px;">
+  <h3 class="fw-bold mb-2"><i class="bi bi-search me-2"></i>Demander un article à l'admin</h3>
+  <p class="text-muted mb-4">
+    Vous cherchez un article introuvable sur le marché ?
+    Envoyez une demande à l'administrateur.
+  </p>
+
+  <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label fw-medium">{{ field.label }}</label>
+          {% if field.html_name == 'categorie' %}
+            <select name="{{ field.html_name }}" class="form-select rounded-3">
+              {% for val, label in field.field.choices %}
+                <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          {% elif field.html_name == 'description' %}
+            <textarea name="{{ field.html_name }}" rows="3"
+                      class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                      placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">{{ field.value|default:'' }}</textarea>
+          {% else %}
+            <input type="{{ field.field.widget.input_type }}"
+                   name="{{ field.html_name }}"
+                   class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                   placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
+                   value="{{ field.value|default:'' }}">
+          {% endif %}
+          {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3"
+              style="background:var(--indigo);border-color:var(--indigo);">
+        <i class="bi bi-send me-2"></i>Envoyer la demande
+      </button>
+    </form>
+  </div>
+
+  {% if mes_demandes %}
+    <h6 class="fw-bold mb-3">Mes demandes précédentes</h6>
+    {% for d in mes_demandes %}
+      <div class="card border-0 shadow-sm rounded-3 p-3 mb-2">
+        <div class="d-flex justify-content-between">
+          <strong class="small">{{ d.nom_article }}</strong>
+          <span class="badge rounded-pill
+            {% if d.statut == 'approuvee' %}bg-success
+            {% elif d.statut == 'refusee' %}bg-danger
+            {% else %}bg-warning text-dark{% endif %}">
+            {{ d.get_statut_display }}
+          </span>
+        </div>
+        <small class="text-muted">{{ d.categorie }} · {{ d.created_at|date:"d/m/Y" }}</small>
+        {% if d.reponse_admin %}
+          <p class="small mt-1 mb-0 text-muted fst-italic">"{{ d.reponse_admin }}"</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Demande de certification{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:600px;">
+  <h3 class="fw-bold mb-2"><i class="bi bi-patch-check me-2 text-success"></i>Demande de certification</h3>
+  <p class="text-muted mb-4">Votre badge apparaîtra dans vos messages et vos annonces, comme sur Instagram.</p>
+
+  {% if user.est_certifie %}
+    <div class="alert alert-success rounded-4">
+      <i class="bi bi-check-circle me-2"></i>
+      Vous êtes déjà certifié(e) !
+      {% if user.badge %}
+        Votre badge :
+        <span class="badge-certifie badge-{{ user.badge.couleur }} ms-2">
+          {{ user.badge.icone }} {{ user.badge.nom }}
+        </span>
+      {% endif %}
+    </div>
+  {% elif demande_en_cours %}
+    <div class="alert alert-info rounded-4">
+      <i class="bi bi-hourglass me-2"></i>
+      Votre demande est en cours d'examen par l'administrateur.
+    </div>
+  {% else %}
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-medium">Votre message à l'admin</label>
+          <textarea name="message" rows="4"
+                    class="form-control rounded-3 {% if form.message.errors %}is-invalid{% endif %}"
+                    placeholder="Pourquoi souhaitez-vous être certifié(e) ?">{{ form.message.value|default:'' }}</textarea>
+          {% if form.message.errors %}
+            <div class="invalid-feedback d-block">{{ form.message.errors.0 }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium">Document justificatif (optionnel)</label>
+          <input type="file" name="document" class="form-control rounded-3"
+                 accept=".pdf,.jpg,.jpeg,.png">
+          <small class="text-muted">CNI, passeport, ou autre document</small>
+        </div>
+        <button type="submit" class="btn btn-success w-100 fw-bold rounded-3">
+          <i class="bi bi-send me-2"></i>Envoyer la demande
+        </button>
+      </form>
+    </div>
+  {% endif %}
+
+  <!-- Historique des demandes -->
+  {% if mes_demandes %}
+    <h6 class="fw-bold mt-4 mb-3">Historique de mes demandes</h6>
+    {% for d in mes_demandes %}
+      <div class="card border-0 shadow-sm rounded-3 p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="small text-muted">{{ d.created_at|date:"d/m/Y H:i" }}</span>
+          <span class="badge rounded-pill
+            {% if d.statut == 'approuvee' %}bg-success
+            {% elif d.statut == 'refusee' %}bg-danger
+            {% else %}bg-warning text-dark{% endif %}">
+            {{ d.get_statut_display }}
+          </span>
+        </div>
+        {% if d.reponse_admin %}
+          <p class="small text-muted mt-2 mb-0">
+            <i class="bi bi-chat-quote me-1"></i>{{ d.reponse_admin }}
+          </p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

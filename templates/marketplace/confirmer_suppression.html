@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Retirer l'article{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:480px;">
+  <div class="card border-0 shadow rounded-4 p-4 text-center">
+    <i class="bi bi-trash text-danger fs-1 mb-3"></i>
+    <h4 class="fw-bold">Retirer l'annonce ?</h4>
+    <p class="text-muted">{{ article.titre }}</p>
+    <p class="small text-muted">L'article ne sera plus visible sur le marché.</p>
+    <form method="post" class="d-flex gap-3 justify-content-center mt-3">
+      {% csrf_token %}
+      <a href="{% url 'marketplace:detail' article.pk %}" class="btn btn-outline-secondary rounded-3">Annuler</a>
+      <button type="submit" class="btn btn-danger fw-bold rounded-3">Oui, retirer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

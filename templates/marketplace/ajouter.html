@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Publier un article{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:700px;">
+  <h3 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2"></i>Publier un article</h3>
+
+  <div class="card border-0 shadow-sm rounded-4 p-4">
+    <form method="post" enctype="multipart/form-data" novalidate id="article-form">
+      {% csrf_token %}
+
+      <!-- Photos (jusqu'à 5) -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">📷 Photos de l'article <small class="text-muted">(max 5)</small></label>
+        <div id="photo-previews" class="d-flex gap-2 flex-wrap mb-2"></div>
+        <div id="photo-slots">
+          {{ formset.management_form }}
+          {% for pf in formset %}
+            <div class="photo-slot mb-2" style="display:{% if forloop.first %}block{% else %}none{% endif %};">
+              <input type="file" name="{{ pf.image.html_name }}"
+                     class="form-control rounded-3 photo-input" accept="image/*"
+                     onchange="handlePhotoChange(this)">
+            </div>
+          {% endfor %}
+        </div>
+        <small class="text-muted">La 1ère photo sera l'image principale</small>
+      </div>
+
+      <div class="row g-3">
+        <!-- Titre -->
+        <div class="col-12">
+          <label class="form-label fw-medium">Titre *</label>
+          <input type="text" name="titre" class="form-control rounded-3 {% if form.titre.errors %}is-invalid{% endif %}"
+                 placeholder="Ex: Samsung Galaxy A54, Livre de physique terminale..."
+                 value="{{ form.titre.value|default:'' }}" required>
+          {% if form.titre.errors %}<div class="invalid-feedback">{{ form.titre.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="col-12">
+          <label class="form-label fw-medium">Description *</label>
+          <textarea name="description" rows="4" class="form-control rounded-3 {% if form.description.errors %}is-invalid{% endif %}"
+                    placeholder="État, caractéristiques, défauts éventuels...">{{ form.description.value|default:'' }}</textarea>
+          {% if form.description.errors %}<div class="invalid-feedback">{{ form.description.errors.0 }}</div>{% endif %}
+        </div>
+
+        <!-- Catégorie & Type -->
+        <div class="col-md-6">
+          <label class="form-label fw-medium">Catégorie *</label>
+          <select name="categorie" id="cat-select" class="form-select rounded-3" onchange="toggleEchange()">
+            {% for val, label in form.fields.categorie.choices %}
+              <option value="{{ val }}" {% if form.categorie.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-medium">Type de transaction *</label>
+          <select name="type_transaction" id="type-select" class="form-select rounded-3">
+            <option value="vendre" {% if form.type_transaction.value == 'vendre' %}selected{% endif %}>💰 À vendre</option>
+            <option value="echanger" id="opt-echanger" {% if form.type_transaction.value == 'echanger' %}selected{% endif %}>🔄 À échanger</option>
+            <option value="don" {% if form.type_transaction.value == 'don' %}selected{% endif %}>🎁 Don gratuit</option>
+          </select>
+        </div>
+
+        <!-- Prix & Condition -->
+        <div class="col-md-6">
+          <label class="form-label fw-medium">Prix (FCFA) *</label>
+          <input type="number" name="prix" class="form-control rounded-3"
+                 min="0" placeholder="0"
+                 value="{{ form.prix.value|default:'' }}">
+          <small id="prix-hint" class="text-muted d-none">Max 5 000 FCFA pour les livres</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-medium">État</label>
+          <select name="condition" class="form-select rounded-3">
+            {% for val, label in form.fields.condition.choices %}
+              <option value="{{ val }}" {% if form.condition.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Ville -->
+        <div class="col-md-6">
+          <label class="form-label fw-medium">Ville</label>
+          <input type="text" name="ville" class="form-control rounded-3"
+                 placeholder="{{ user.ville|default:'Yaoundé' }}"
+                 value="{{ form.ville.value|default:user.ville }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-medium">Région</label>
+          <select name="region" class="form-select rounded-3">
+            <option value="">-- Région --</option>
+            {% for val, label in form.fields.region.choices %}
+              <option value="{{ val }}" {% if form.region.value == val or user.region == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-3 rounded-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary w-100 mt-4 fw-bold btn-lg rounded-3"
+              style="background:var(--indigo);border-color:var(--indigo);">
+        <i class="bi bi-send me-2"></i>Publier l'article
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let photoCount = 0;
+const MAX_PHOTOS = 5;
+
+function handlePhotoChange(input) {
+  if (!input.files[0]) return;
+  photoCount++;
+
+  // Prévisualisation
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('photo-previews');
+    const div = document.createElement('div');
+    div.style = 'position:relative;';
+    div.innerHTML = `<img src="${e.target.result}"
+      style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--indigo);">`;
+    preview.appendChild(div);
+  };
+  reader.readAsDataURL(input.files[0]);
+
+  // Afficher le prochain slot si < 5
+  if (photoCount < MAX_PHOTOS) {
+    const slots = document.querySelectorAll('.photo-slot');
+    if (slots[photoCount]) {
+      slots[photoCount].style.display = 'block';
+    }
+  }
+}
+
+function toggleEchange() {
+  const cat   = document.getElementById('cat-select').value;
+  const opt   = document.getElementById('opt-echanger');
+  const hint  = document.getElementById('prix-hint');
+  const type  = document.getElementById('type-select');
+  opt.disabled = (cat !== 'Livres');
+  hint.classList.toggle('d-none', cat !== 'Livres');
+  if (cat !== 'Livres' && type.value === 'echanger') {
+    type.value = 'vendre';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', toggleEchange);
+</script>
+{% endblock %}

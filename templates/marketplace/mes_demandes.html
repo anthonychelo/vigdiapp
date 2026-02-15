@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Mes échanges{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3 class="fw-bold mb-4"><i class="bi bi-arrow-left-right me-2"></i>Mes échanges de livres</h3>
+
+  <div class="row g-4">
+
+    <!-- Demandes reçues (je suis vendeur) -->
+    <div class="col-lg-6">
+      <h5 class="fw-semibold mb-3 text-success">
+        <i class="bi bi-inbox me-2"></i>Propositions reçues
+        <span class="badge bg-success ms-1">{{ demandes_recues.count }}</span>
+      </h5>
+      {% for d in demandes_recues %}
+        <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden">
+          <div class="row g-0">
+            <!-- Photo livre proposé -->
+            <div class="col-4">
+              {% if d.photo_livre %}
+                <img src="{{ d.photo_livre.url }}"
+                     style="width:100%;height:130px;object-fit:cover;">
+              {% else %}
+                <div class="d-flex align-items-center justify-content-center bg-light h-100" style="min-height:130px;font-size:2rem;">📚</div>
+              {% endif %}
+            </div>
+            <div class="col-8 p-3">
+              <!-- Demandeur avec badge -->
+              <div class="d-flex align-items-center gap-1 mb-1">
+                <strong class="small">{{ d.demandeur.get_full_name|default:d.demandeur.username }}</strong>
+                {% if d.demandeur.afficher_badge %}
+                  <span title="{{ d.demandeur.badge.nom }}">{{ d.demandeur.badge.icone }}</span>
+                {% endif %}
+              </div>
+              <p class="small text-muted mb-1">
+                Propose : <strong>{{ d.titre_livre }}</strong>
+              </p>
+              {% if d.message %}
+                <p class="small text-muted mb-2 fst-italic">"{{ d.message|truncatechars:60 }}"</p>
+              {% endif %}
+              <div class="mb-2">
+                <span class="badge rounded-pill
+                  {% if d.statut == 'en_attente' %}bg-warning text-dark
+                  {% elif d.statut == 'acceptee' %}bg-success
+                  {% else %}bg-secondary{% endif %}">
+                  {{ d.get_statut_display }}
+                </span>
+              </div>
+              {% if d.statut == 'en_attente' %}
+                <div class="d-flex gap-2">
+                  <a href="{% url 'marketplace:repondre_echange' d.pk 'accepter' %}"
+                     class="btn btn-success btn-sm rounded-pill">✓ Accepter</a>
+                  <a href="{% url 'marketplace:repondre_echange' d.pk 'refuser' %}"
+                     class="btn btn-outline-danger btn-sm rounded-pill">✕ Refuser</a>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="px-3 pb-2 small text-muted">
+            Pour : <a href="{% url 'marketplace:detail' d.article_propose.pk %}" class="text-decoration-none">
+              {{ d.article_propose.titre|truncatechars:40 }}
+            </a>
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+          Aucune proposition reçue
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Demandes envoyées (je suis demandeur) -->
+    <div class="col-lg-6">
+      <h5 class="fw-semibold mb-3 text-primary">
+        <i class="bi bi-send me-2"></i>Mes propositions envoyées
+        <span class="badge bg-primary ms-1">{{ demandes_envoyees.count }}</span>
+      </h5>
+      {% for d in demandes_envoyees %}
+        <div class="card border-0 shadow-sm rounded-4 mb-3 p-3">
+          <div class="d-flex gap-3">
+            {% if d.photo_livre %}
+              <img src="{{ d.photo_livre.url }}"
+                   style="width:70px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+            {% endif %}
+            <div class="flex-grow-1">
+              <p class="fw-bold small mb-1">Mon livre : {{ d.titre_livre }}</p>
+              <p class="small text-muted mb-1">
+                Pour :
+                <a href="{% url 'marketplace:detail' d.article_propose.pk %}" class="text-decoration-none">
+                  {{ d.article_propose.titre|truncatechars:40 }}
+                </a>
+              </p>
+              <p class="small text-muted mb-1">
+                Vendeur : {{ d.article_propose.vendeur.get_full_name|default:d.article_propose.vendeur.username }}
+                {% if d.article_propose.vendeur.afficher_badge %}{{ d.article_propose.vendeur.badge.icone }}{% endif %}
+              </p>
+              <span class="badge rounded-pill
+                {% if d.statut == 'en_attente' %}bg-warning text-dark
+                {% elif d.statut == 'acceptee' %}bg-success
+                {% else %}bg-secondary{% endif %}">
+                {{ d.get_statut_display }}
+              </span>
+              {% if d.statut == 'acceptee' %}
+                <a href="{% url 'messaging:demarrer' d.article_propose.vendeur.pk %}"
+                   class="btn btn-sm btn-outline-primary ms-2 rounded-pill">
+                  <i class="bi bi-chat me-1"></i>Contacter
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-send fs-2 d-block mb-2"></i>
+          Aucune proposition envoyée
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

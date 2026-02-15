@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Connexion – ViGDiM{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:440px;">
+  <div class="card border-0 shadow-lg rounded-4 p-4">
+    <div class="text-center mb-4">
+      <div style="font-size:3rem;">🛍️</div>
+      <h2 class="fw-bold">Connexion</h2>
+      <p class="text-muted small">Bienvenue sur ViGDiM</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label fw-medium">{{ field.label }}</label>
+          <input type="{{ field.field.widget.input_type }}"
+                 name="{{ field.html_name }}"
+                 class="form-control form-control-lg rounded-3 {% if field.errors %}is-invalid{% endif %}"
+                 placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}"
+                 value="{{ field.value|default:'' }}">
+          {% if field.errors %}
+            <div class="invalid-feedback">{{ field.errors.0 }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-bold rounded-3"
+              style="background:var(--indigo);border-color:var(--indigo);">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+      </button>
+    </form>
+    <hr>
+    <p class="text-center mb-0">
+      Pas encore de compte ?
+      <a href="{% url 'accounts:inscription' %}" class="fw-bold text-decoration-none">
+        S'inscrire gratuitement
+      </a>
+    </p>
+  </div>
+</div>
+{% endblock %}

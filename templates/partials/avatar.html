@@ -1,0 +1,54 @@
+{% comment %}
+  Partial réutilisable : avatar + badge style Instagram
+  Variables attendues :
+    - u        : l'objet utilisateur
+    - taille   : taille en px (défaut 50)
+    - font     : taille de la fonte initiale (défaut 1.1rem)
+    - badge_sz : taille du badge en px (défaut 22)
+{% endcomment %}
+
+{% with taille=taille|default:50 %}
+<div style="position:relative;display:inline-block;flex-shrink:0;">
+
+  {% if u.photo_profil %}
+    <img src="{{ u.photo_profil.url }}"
+         style="width:{{ taille }}px;height:{{ taille }}px;border-radius:50%;
+                object-fit:cover;display:block;"
+         alt="{{ u.get_full_name|default:u.username }}">
+  {% else %}
+    <div style="width:{{ taille }}px;height:{{ taille }}px;border-radius:50%;
+                background:var(--indigo);color:white;font-weight:700;
+                font-size:{{ font|default:'1.1rem' }};
+                display:flex;align-items:center;justify-content:center;">
+      {{ u.first_name|first|upper|default:u.username|first|upper }}
+    </div>
+  {% endif %}
+
+  {% if u.afficher_badge %}
+    {% with sz=badge_sz|default:22 %}
+    <div style="position:absolute;bottom:-2px;right:-4px;
+                width:{{ sz }}px;height:{{ sz }}px;">
+      {% if u.badge.image %}
+        <img src="{{ u.badge.image.url }}"
+             style="width:100%;height:100%;object-fit:contain;"
+             title="{{ u.badge.nom }}">
+      {% else %}
+        <!-- Badge SVG intégré (style Instagram) selon la couleur -->
+        {% if u.badge.couleur == 'blue' %}
+          {% include 'partials/badge_svg.html' with couleur='#3b82f6' %}
+        {% elif u.badge.couleur == 'gold' %}
+          {% include 'partials/badge_svg.html' with couleur='#f59e0b' %}
+        {% elif u.badge.couleur == 'green' %}
+          {% include 'partials/badge_svg.html' with couleur='#10b981' %}
+        {% elif u.badge.couleur == 'purple' %}
+          {% include 'partials/badge_svg.html' with couleur='#8b5cf6' %}
+        {% else %}
+          {% include 'partials/badge_svg.html' with couleur='#e53e3e' %}
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endwith %}
+  {% endif %}
+
+</div>
+{% endwith %}

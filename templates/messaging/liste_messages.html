@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Messagerie{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:640px;">
+  <h3 class="fw-bold mb-4"><i class="bi bi-chat-dots me-2"></i>Messagerie</h3>
+
+  {% if conversations %}
+    {% for conv in conversations %}
+      <a href="{% url 'messaging:conversation' conv.pk %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm rounded-4 mb-3 p-3
+                    {% if conv.nb_non_lus_user %}border-start border-primary border-3{% endif %}">
+          <div class="d-flex align-items-center gap-3">
+
+            <!-- Avatar autre participant (pré-calculé dans la vue) -->
+            {% with autre=conv.autre_user %}
+              {% if autre.photo_profil %}
+                <img src="{{ autre.photo_profil.url }}"
+                     style="width:50px;height:50px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+              {% else %}
+                <div style="width:50px;height:50px;border-radius:50%;background:var(--indigo);
+                            color:white;font-size:1.2rem;font-weight:700;display:flex;
+                            align-items:center;justify-content:center;flex-shrink:0;">
+                  {{ autre.first_name|first|upper|default:autre.username|first|upper }}
+                </div>
+              {% endif %}
+
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex align-items-center gap-1">
+                  <span class="fw-bold text-dark">
+                    {{ autre.get_full_name|default:autre.username }}
+                  </span>
+                  {% include 'partials/badge_inline.html' with u=autre %}
+                  {% if conv.nb_non_lus_user %}
+                    <span class="badge bg-primary rounded-pill ms-1" style="font-size:.65rem;">
+                      {{ conv.nb_non_lus_user }} nouveau
+                    </span>
+                  {% endif %}
+                </div>
+
+                {% if conv.article %}
+                  <small class="text-primary d-block text-truncate">
+                    <i class="bi bi-tag me-1"></i>{{ conv.article.titre|truncatechars:35 }}
+                  </small>
+                {% endif %}
+
+                {% if conv.dernier %}
+                  <p class="text-muted small mb-0 text-truncate">
+                    {% if conv.dernier.expediteur == user %}Vous : {% endif %}
+                    {{ conv.dernier.contenu }}
+                  </p>
+                {% endif %}
+              </div>
+
+              {% if conv.dernier %}
+                <small class="text-muted flex-shrink-0">
+                  {{ conv.dernier.created_at|timesince|truncatechars:8 }}
+                </small>
+              {% endif %}
+            {% endwith %}
+
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+
+  {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-chat-square-dots fs-1 d-block mb-3" style="opacity:.3;color:var(--indigo);"></i>
+      <h5>Aucun message pour l'instant</h5>
+      <p>Consultez le marché et contactez un vendeur !</p>
+      <a href="{% url 'marketplace:liste' %}" class="btn btn-primary rounded-pill"
+         style="background:var(--indigo);border-color:var(--indigo);">
+        Voir les articles
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
