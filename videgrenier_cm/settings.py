@@ -1,18 +1,16 @@
 """
 ViGDi – settings.py
-Supporte : SQLite (dev) / PostgreSQL (prod Render) + stockage local / AWS S3
 """
 from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
-import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ─── Sécurité ────────────────────────────────────────────────────────────────
 SECRET_KEY    = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 DEBUG         = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='vigdiapp.onrender.com', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 # ─── Applications ─────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -24,6 +22,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_bootstrap5',
+    'cloudinary_storage',
+    'cloudinary',
     'accounts',
     'marketplace',
     'messaging',
@@ -66,13 +66,14 @@ WSGI_APPLICATION = 'videgrenier_cm.wsgi.application'
 DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
-    # PostgreSQL sur Render
     DATABASES = {
         'default': dj_database_url.config(
-            default='postgresql://vigdi_db_user:7eKYYyboZa9JjVz5ZnocRlBGL3Xb1w9s@dpg-d67l8795pdvs73eh74ng-a/vigdi_db')
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
 else:
-    # SQLite en développement local
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -107,16 +108,16 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ─── Stockage des médias ──────────────────────────────────────────────────────
-# ─── Stockage des médias ──────────────────────────────────────────────────────
 MEDIA_STORAGE = config('MEDIA_STORAGE', default='local')
 
 if MEDIA_STORAGE == 'cloudinary':
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': config('CLOUDINARY_API_KEY'),
-        'API_SECRET': config('CLOUDINARY_API_SECRET')
+        'API_KEY':    config('CLOUDINARY_API_KEY'),
+        'API_SECRET': config('CLOUDINARY_API_SECRET'),
     }
+    MEDIA_URL = '/media/'
 else:
     MEDIA_URL  = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
