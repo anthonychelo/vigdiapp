@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
 {% block title %}Modifier mon profil{% endblock %}
+{% block nav_profil %}active{% endblock %}
 {% block content %}
 <div class="container py-4" style="max-width:600px;">
   <h3 class="fw-bold mb-4"><i class="bi bi-pencil me-2"></i>Modifier mon profil</h3>
 
-  <div class="card border-0 shadow-sm rounded-4 p-4">
+  <div class="vigdi-card">
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
 
-      <!-- Photo de profil actuelle -->
+      <!-- Photo de profil -->
       <div class="text-center mb-4">
         {% if user.photo_profil %}
-          <img src="{{ user.photo_profil.url }}"
-               id="avatar-preview"
-               style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--indigo);">
+          <img src="{{ user.photo_profil.url }}" id="avatar-preview"
+               style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);">
         {% else %}
           <div id="avatar-preview-placeholder"
-               style="width:100px;height:100px;border-radius:50%;background:var(--indigo);
+               style="width:100px;height:100px;border-radius:50%;background:var(--primary);
                       color:white;font-size:2rem;font-weight:700;display:flex;
                       align-items:center;justify-content:center;margin:0 auto;">
             {{ user.first_name|first|upper|default:user.username|first|upper }}
@@ -47,7 +47,7 @@
               {% elif field.html_name == 'bio' %}
                 <textarea name="{{ field.html_name }}"
                           class="form-control rounded-3 {% if field.errors %}is-invalid{% endif %}"
-                          rows="3" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">{{ field.value|default:'' }}</textarea>
+                          rows="3">{{ field.value|default:'' }}</textarea>
               {% else %}
                 <input type="{{ field.field.widget.input_type }}"
                        name="{{ field.html_name }}"
@@ -62,8 +62,7 @@
         {% endfor %}
       </div>
 
-      <button type="submit" class="btn btn-primary w-100 mt-4 fw-bold rounded-3"
-              style="background:var(--indigo);border-color:var(--indigo);">
+      <button type="submit" class="btn btn-vigdi w-100 mt-4 fw-bold">
         <i class="bi bi-check-lg me-2"></i>Sauvegarder les modifications
       </button>
     </form>
@@ -77,15 +76,13 @@ function previewPhoto(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
     reader.onload = e => {
-      // Supprimer le placeholder texte si présent
       const placeholder = document.getElementById('avatar-preview-placeholder');
       if (placeholder) placeholder.remove();
-      // Créer ou mettre à jour l'image
       let img = document.getElementById('avatar-preview');
       if (!img) {
         img = document.createElement('img');
         img.id = 'avatar-preview';
-        img.style = 'width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--indigo);';
+        img.style = 'width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);';
         input.closest('.text-center').insertBefore(img, input.closest('.mt-2'));
       }
       img.src = e.target.result;

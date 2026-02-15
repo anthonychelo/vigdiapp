@@ -4,13 +4,13 @@
 <div class="container py-4" style="max-width:700px;">
   <h3 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2"></i>Publier un article</h3>
 
-  <div class="card border-0 shadow-sm rounded-4 p-4">
+  <div class="vigdi-card">
     <form method="post" enctype="multipart/form-data" novalidate id="article-form">
       {% csrf_token %}
 
-      <!-- Photos (jusqu'à 5) -->
+      <!-- Photos -->
       <div class="mb-4">
-        <label class="form-label fw-bold">📷 Photos de l'article <small class="text-muted">(max 5)</small></label>
+        <label class="form-label fw-bold">📷 Photos <small class="text-muted">(max 5)</small></label>
         <div id="photo-previews" class="d-flex gap-2 flex-wrap mb-2"></div>
         <div id="photo-slots">
           {{ formset.management_form }}
@@ -29,8 +29,9 @@
         <!-- Titre -->
         <div class="col-12">
           <label class="form-label fw-medium">Titre *</label>
-          <input type="text" name="titre" class="form-control rounded-3 {% if form.titre.errors %}is-invalid{% endif %}"
-                 placeholder="Ex: Samsung Galaxy A54, Livre de physique terminale..."
+          <input type="text" name="titre"
+                 class="form-control rounded-3 {% if form.titre.errors %}is-invalid{% endif %}"
+                 placeholder="Ex: Samsung Galaxy A54, Livre de physique..."
                  value="{{ form.titre.value|default:'' }}" required>
           {% if form.titre.errors %}<div class="invalid-feedback">{{ form.titre.errors.0 }}</div>{% endif %}
         </div>
@@ -38,7 +39,8 @@
         <!-- Description -->
         <div class="col-12">
           <label class="form-label fw-medium">Description *</label>
-          <textarea name="description" rows="4" class="form-control rounded-3 {% if form.description.errors %}is-invalid{% endif %}"
+          <textarea name="description" rows="4"
+                    class="form-control rounded-3 {% if form.description.errors %}is-invalid{% endif %}"
                     placeholder="État, caractéristiques, défauts éventuels...">{{ form.description.value|default:'' }}</textarea>
           {% if form.description.errors %}<div class="invalid-feedback">{{ form.description.errors.0 }}</div>{% endif %}
         </div>
@@ -65,8 +67,7 @@
         <div class="col-md-6">
           <label class="form-label fw-medium">Prix (FCFA) *</label>
           <input type="number" name="prix" class="form-control rounded-3"
-                 min="0" placeholder="0"
-                 value="{{ form.prix.value|default:'' }}">
+                 min="0" placeholder="0" value="{{ form.prix.value|default:'' }}">
           <small id="prix-hint" class="text-muted d-none">Max 5 000 FCFA pour les livres</small>
         </div>
         <div class="col-md-6">
@@ -78,7 +79,7 @@
           </select>
         </div>
 
-        <!-- Ville -->
+        <!-- Ville & Région -->
         <div class="col-md-6">
           <label class="form-label fw-medium">Ville</label>
           <input type="text" name="ville" class="form-control rounded-3"
@@ -100,8 +101,7 @@
         <div class="alert alert-danger mt-3 rounded-3">{{ form.non_field_errors }}</div>
       {% endif %}
 
-      <button type="submit" class="btn btn-primary w-100 mt-4 fw-bold btn-lg rounded-3"
-              style="background:var(--indigo);border-color:var(--indigo);">
+      <button type="submit" class="btn btn-vigdi w-100 mt-4 fw-bold btn-lg">
         <i class="bi bi-send me-2"></i>Publier l'article
       </button>
     </form>
@@ -117,40 +117,31 @@ const MAX_PHOTOS = 5;
 function handlePhotoChange(input) {
   if (!input.files[0]) return;
   photoCount++;
-
-  // Prévisualisation
   const reader = new FileReader();
   reader.onload = e => {
     const preview = document.getElementById('photo-previews');
     const div = document.createElement('div');
     div.style = 'position:relative;';
     div.innerHTML = `<img src="${e.target.result}"
-      style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--indigo);">`;
+      style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--primary);">`;
     preview.appendChild(div);
   };
   reader.readAsDataURL(input.files[0]);
-
-  // Afficher le prochain slot si < 5
   if (photoCount < MAX_PHOTOS) {
     const slots = document.querySelectorAll('.photo-slot');
-    if (slots[photoCount]) {
-      slots[photoCount].style.display = 'block';
-    }
+    if (slots[photoCount]) slots[photoCount].style.display = 'block';
   }
 }
 
 function toggleEchange() {
-  const cat   = document.getElementById('cat-select').value;
-  const opt   = document.getElementById('opt-echanger');
-  const hint  = document.getElementById('prix-hint');
-  const type  = document.getElementById('type-select');
+  const cat  = document.getElementById('cat-select').value;
+  const opt  = document.getElementById('opt-echanger');
+  const hint = document.getElementById('prix-hint');
+  const type = document.getElementById('type-select');
   opt.disabled = (cat !== 'Livres');
   hint.classList.toggle('d-none', cat !== 'Livres');
-  if (cat !== 'Livres' && type.value === 'echanger') {
-    type.value = 'vendre';
-  }
+  if (cat !== 'Livres' && type.value === 'echanger') type.value = 'vendre';
 }
-
 document.addEventListener('DOMContentLoaded', toggleEchange);
 </script>
 {% endblock %}
