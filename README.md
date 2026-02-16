@@ -1,4 +1,4 @@
-# 🛍️ ViGDiM — Backend Django
+# 🛍️ ViGDi — Backend Django
 
 Application de marché camerounais développée en **Python + Django pur**.
 

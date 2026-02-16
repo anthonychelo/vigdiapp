@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================================
-#  ViGDiM — Script d'installation et de démarrage
+#  ViGDi — Script d'installation et de démarrage
 # ============================================================
 
 set -e   # Arrêter si erreur
 
 echo "======================================"
-echo "  📦 Installation de ViGDiM"
+echo "  📦 Installation de ViGDi"
 echo "======================================"
 
 # 1. Créer l'environnement virtuel
