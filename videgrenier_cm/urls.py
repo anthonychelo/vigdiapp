@@ -14,10 +14,11 @@ urlpatterns = [
     path('marketplace/', include('marketplace.urls',  namespace='marketplace')),
     path('messages/',    include('messaging.urls',    namespace='messaging')),
     path('badges/',      include('badges.urls',       namespace='badges')),
-    path('',             include('marketplace.urls',  namespace='home')),   # redirection racine
+    path('',             include('marketplace.urls')),  # ⚠️ CORRECTION: pas de namespace ici pour éviter les conflits
 ]
 
-# Servir les médias en développement
-if settings.DEBUG:
+# Servir les médias en développement UNIQUEMENT si stockage local
+# En production avec Cloudinary, ce n'est pas nécessaire
+if settings.DEBUG and getattr(settings, 'MEDIA_STORAGE', 'local') == 'local':
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

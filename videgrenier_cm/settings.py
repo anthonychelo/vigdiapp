@@ -1,5 +1,5 @@
 """
-ViGDi – settings.py
+ViGDi – settings.py (Version corrigée pour Cloudinary)
 """
 from pathlib import Path
 from decouple import config, Csv
@@ -107,18 +107,37 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ─── Stockage des médias ──────────────────────────────────────────────────────
+# ─── Stockage des médias (CONFIGURATION CORRIGÉE) ─────────────────────────────
 MEDIA_STORAGE = config('MEDIA_STORAGE', default='local')
 
 if MEDIA_STORAGE == 'cloudinary':
+    # IMPORTANT : Configuration Cloudinary AVANT DEFAULT_FILE_STORAGE
+    import cloudinary
+    import cloudinary.uploader
+    import cloudinary.api
+    
+    cloudinary.config(
+        cloud_name = config('CLOUDINARY_CLOUD_NAME'),
+        api_key = config('CLOUDINARY_API_KEY'),
+        api_secret = config('CLOUDINARY_API_SECRET'),
+        secure = True
+    )
+    
+    # Utiliser le storage Cloudinary
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    
+    # Configuration du storage
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY':    config('CLOUDINARY_API_KEY'),
+        'API_KEY': config('CLOUDINARY_API_KEY'),
         'API_SECRET': config('CLOUDINARY_API_SECRET'),
     }
+    
+    # MEDIA_URL doit être vide ou '/' pour que cloudinary_storage génère les bonnes URLs
+    MEDIA_URL = '/media/'
 else:
-    MEDIA_URL  = '/media/'
+    # Configuration locale (développement)
+    MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 
 # ─── Crispy Forms ─────────────────────────────────────────────────────────────
