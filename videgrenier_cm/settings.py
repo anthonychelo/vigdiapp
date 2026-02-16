@@ -1,9 +1,13 @@
 """
-ViGDi – settings.py (Version corrigée pour Cloudinary)
+ViGDi – settings.py (Version avec débogage intégré)
+
+IMPORTANT : Remplacez toute la section "Stockage des médias" par ce code
 """
+
 from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,8 +26,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_bootstrap5',
-    'cloudinary_storage',
-    'cloudinary',
+    'cloudinary_storage',  # DOIT être avant 'cloudinary'
+    'cloudinary',          # DOIT être après 'cloudinary_storage'
     'accounts',
     'marketplace',
     'messaging',
@@ -107,36 +111,61 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ─── Stockage des médias (CONFIGURATION CORRIGÉE) ─────────────────────────────
-MEDIA_STORAGE = config('MEDIA_STORAGE', default='local')
+# ─── Stockage des médias (VERSION CORRIGÉE AVEC DÉBOGAGE) ────────────────────
+# Lire la variable d'environnement directement
+MEDIA_STORAGE = os.environ.get('MEDIA_STORAGE', config('MEDIA_STORAGE', default='local'))
+
+# DÉBOGAGE : Afficher la valeur lors du démarrage
+print(f"🔍 DEBUG - MEDIA_STORAGE = '{MEDIA_STORAGE}'")
 
 if MEDIA_STORAGE == 'cloudinary':
-    # IMPORTANT : Configuration Cloudinary AVANT DEFAULT_FILE_STORAGE
-    import cloudinary
-    import cloudinary.uploader
-    import cloudinary.api
+    print("📍 Configuration Cloudinary activée...")
     
-    cloudinary.config(
-        cloud_name = config('CLOUDINARY_CLOUD_NAME'),
-        api_key = config('CLOUDINARY_API_KEY'),
-        api_secret = config('CLOUDINARY_API_SECRET'),
-        secure = True
-    )
+    # Lire les identifiants Cloudinary
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME') or config('CLOUDINARY_CLOUD_NAME', default='')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY') or config('CLOUDINARY_API_KEY', default='')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET') or config('CLOUDINARY_API_SECRET', default='')
     
-    # Utiliser le storage Cloudinary
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    # DÉBOGAGE : Vérifier les identifiants
+    print(f"   Cloud Name: {CLOUDINARY_CLOUD_NAME if CLOUDINARY_CLOUD_NAME else '❌ MANQUANT'}")
+    print(f"   API Key: {CLOUDINARY_API_KEY[:10] + '...' if CLOUDINARY_API_KEY else '❌ MANQUANT'}")
+    print(f"   API Secret: {'✅ Présent' if CLOUDINARY_API_SECRET else '❌ MANQUANT'}")
     
-    # Configuration du storage
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': config('CLOUDINARY_API_KEY'),
-        'API_SECRET': config('CLOUDINARY_API_SECRET'),
-    }
-    
-    # MEDIA_URL doit être vide ou '/' pour que cloudinary_storage génère les bonnes URLs
-    MEDIA_URL = '/media/'
+    # Vérifier que tous les identifiants sont présents
+    if not all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
+        print("❌ ERREUR : Identifiants Cloudinary manquants !")
+        print("   Utilisation du stockage local par défaut")
+        MEDIA_URL = '/media/'
+        MEDIA_ROOT = BASE_DIR / 'media'
+    else:
+        # Configuration Cloudinary
+        import cloudinary
+        import cloudinary.uploader
+        import cloudinary.api
+        
+        cloudinary.config(
+            cloud_name = CLOUDINARY_CLOUD_NAME,
+            api_key = CLOUDINARY_API_KEY,
+            api_secret = CLOUDINARY_API_SECRET,
+            secure = True
+        )
+        
+        # Définir le storage
+        DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+        
+        # Configuration supplémentaire
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+            'API_KEY': CLOUDINARY_API_KEY,
+            'API_SECRET': CLOUDINARY_API_SECRET,
+        }
+        
+        MEDIA_URL = '/media/'
+        
+        print("✅ Cloudinary configuré avec succès !")
+        print(f"   DEFAULT_FILE_STORAGE = {DEFAULT_FILE_STORAGE}")
 else:
-    # Configuration locale (développement)
+    print(f"📍 Stockage local activé (MEDIA_STORAGE = '{MEDIA_STORAGE}')")
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
 
