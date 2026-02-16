@@ -1,16 +1,11 @@
+"""
+accounts/models.py - Version avec CloudinaryField pour forcer Cloudinary
+"""
 import os
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from cloudinary.models import CloudinaryField
-
-
-def profil_photo_path(instance, filename):
-    """Stocke la photo de profil dans media/profiles/<user_id>/"""
-    ext = os.path.splitext(filename)[1]
-    # Utiliser username au lieu de id pour éviter les problèmes avec les nouveaux users
-    username = instance.username or 'temp'
-    return f'profiles/{username}/avatar{ext}'
 
 
 class Badge(models.Model):
@@ -29,8 +24,12 @@ class Badge(models.Model):
     icone        = models.CharField(max_length=10, default='✅',
                                     help_text="Emoji ou texte court affiché à côté du nom")
     couleur      = models.CharField(max_length=10, choices=BADGE_COULEUR_CHOICES, default='blue')
-    image        = models.ImageField(upload_to='badges/', blank=True, null=True,
-                                     help_text="Image optionnelle (PNG transparent recommandé)")
+    
+    # CLOUDINARY FIELD - Force l'upload sur Cloudinary
+    image        = CloudinaryField('image', blank=True, null=True,
+                                   folder='badges',
+                                   help_text="Image optionnelle (PNG transparent recommandé)")
+    
     actif        = models.BooleanField(default=True)
     created_at   = models.DateTimeField(auto_now_add=True)
 
@@ -71,9 +70,10 @@ class User(AbstractUser):
     ville        = models.CharField(max_length=100, blank=True)
     region       = models.CharField(max_length=20, choices=REGION_CHOICES, blank=True)
     
-    # PHOTO DE PROFIL - Utilise ImageField qui sera géré par DEFAULT_FILE_STORAGE
-    photo_profil = models.ImageField(upload_to=profil_photo_path, blank=True, null=True,
-                                     help_text="Photo de profil de l'utilisateur")
+    # CLOUDINARY FIELD - Force l'upload sur Cloudinary directement
+    photo_profil = CloudinaryField('image', blank=True, null=True,
+                                   folder='profiles',
+                                   help_text="Photo de profil de l'utilisateur")
     
     bio          = models.TextField(max_length=300, blank=True)
 
@@ -101,7 +101,7 @@ class User(AbstractUser):
 
     @property
     def photo(self):
-        """Alias pour photo_profil - pour compatibilité avec les anciens templates"""
+        """Alias pour photo_profil - pour compatibilité avec les templates"""
         return self.photo_profil
 
     @property
@@ -137,15 +137,15 @@ class DemandeVerification(models.Model):
         ('refusee',    'Refusée'),
     ]
 
-    utilisateur  = models.ForeignKey(User, on_delete=models.CASCADE,
-                                     related_name='demandes_verification')
-    message      = models.TextField(help_text="Pourquoi souhaitez-vous être certifié ?")
-    document     = models.FileField(upload_to='verifications/', blank=True, null=True,
-                                    help_text="Document justificatif (CNI, etc.)")
-    statut       = models.CharField(max_length=15, choices=STATUT_CHOICES, default='en_attente')
+    utilisateur   = models.ForeignKey(User, on_delete=models.CASCADE,
+                                      related_name='demandes_verification')
+    message       = models.TextField(help_text="Pourquoi souhaitez-vous être certifié ?")
+    document      = models.FileField(upload_to='verifications/', blank=True, null=True,
+                                     help_text="Document justificatif (CNI, etc.)")
+    statut        = models.CharField(max_length=15, choices=STATUT_CHOICES, default='en_attente')
     reponse_admin = models.TextField(blank=True, help_text="Réponse/Note de l'admin")
-    created_at   = models.DateTimeField(auto_now_add=True)
-    updated_at   = models.DateTimeField(auto_now=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name        = "Demande de verification"

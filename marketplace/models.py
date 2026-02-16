@@ -1,21 +1,11 @@
+"""
+marketplace/models.py - Version avec CloudinaryField pour forcer Cloudinary
+"""
 import os
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from accounts.models import User
-
-
-def article_photo_path(instance, filename):
-    """Stocke les photos dans media/articles/<article_id>/"""
-    ext = os.path.splitext(filename)[1]
-    import uuid
-    return f'articles/{instance.article.id}/{uuid.uuid4().hex}{ext}'
-
-
-def echange_photo_path(instance, filename):
-    """Photo du livre proposé en échange."""
-    ext = os.path.splitext(filename)[1]
-    import uuid
-    return f'echanges/{instance.id}/{uuid.uuid4().hex}{ext}'
+from cloudinary.models import CloudinaryField
 
 
 class Article(models.Model):
@@ -104,7 +94,10 @@ class Article(models.Model):
 class ArticlePhoto(models.Model):
     """Photos associées à un article (max 5)."""
     article    = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='photos')
-    image      = models.ImageField(upload_to=article_photo_path)
+    
+    # CLOUDINARY FIELD - Force l'upload sur Cloudinary
+    image      = CloudinaryField('image', folder='articles')
+    
     ordre      = models.PositiveSmallIntegerField(default=0, help_text="Ordre d'affichage")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -139,8 +132,11 @@ class DemandeEchange(models.Model):
                                           help_text="Titre du livre que vous proposez")
     description_livre = models.TextField(blank=True,
                                           help_text="Description de votre livre")
-    photo_livre       = models.ImageField(upload_to=echange_photo_path,
-                                          help_text="Photo de votre livre (obligatoire)")
+    
+    # CLOUDINARY FIELD - Force l'upload sur Cloudinary
+    photo_livre       = CloudinaryField('image', folder='echanges',
+                                        help_text="Photo de votre livre (obligatoire)")
+    
     message           = models.TextField(blank=True,
                                           help_text="Message au vendeur")
     statut            = models.CharField(max_length=12, choices=STATUT_CHOICES,
