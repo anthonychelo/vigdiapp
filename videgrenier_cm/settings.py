@@ -1,14 +1,10 @@
 """
-ViGDi – settings.py (VERSION AVEC LOGS SAFE)
+ViGDi – settings.py (VERSION ULTRA STABLE)
 """
 from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
 import os
-import logging
-
-# Configurer le logging pour les messages de debug
-logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -112,81 +108,29 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ─── Stockage des médias (CLOUDINARY AVEC LOGS) ──────────────────────────────
-# Créer un fichier de log visible
-import sys
-log_file = BASE_DIR / 'cloudinary_config.log'
+# ─── Stockage des médias (CLOUDINARY - ULTRA SIMPLE) ─────────────────────────
+# Configuration Cloudinary directe sans conditions
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
-def write_log(message):
-    """Écrire dans un fichier de log au lieu de print"""
-    try:
-        with open(log_file, 'a') as f:
-            f.write(f"{message}\n")
-        # Aussi écrire sur stderr pour que ce soit dans les logs Render
-        sys.stderr.write(f"{message}\n")
-        sys.stderr.flush()
-    except:
-        pass
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'depzsog7b'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', '752568181381313'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    secure=True
+)
 
-write_log("\n" + "="*70)
-write_log("VIGDI - Configuration du stockage des médias")
-write_log("="*70)
+# Forcer l'utilisation de Cloudinary
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-MEDIA_STORAGE = os.environ.get('MEDIA_STORAGE', 'local')
-write_log(f"MEDIA_STORAGE = '{MEDIA_STORAGE}'")
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'depzsog7b'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '752568181381313'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+}
 
-if MEDIA_STORAGE == 'cloudinary':
-    write_log("Tentative de configuration Cloudinary...")
-    
-    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
-    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '')
-    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '')
-    
-    write_log(f"  Cloud Name: {CLOUDINARY_CLOUD_NAME if CLOUDINARY_CLOUD_NAME else 'MANQUANT'}")
-    write_log(f"  API Key: {CLOUDINARY_API_KEY[:5] + '...' if CLOUDINARY_API_KEY else 'MANQUANT'}")
-    write_log(f"  API Secret: {'Present' if CLOUDINARY_API_SECRET else 'MANQUANT'}")
-    
-    if all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
-        try:
-            import cloudinary
-            import cloudinary.uploader
-            import cloudinary.api
-            
-            cloudinary.config(
-                cloud_name=CLOUDINARY_CLOUD_NAME,
-                api_key=CLOUDINARY_API_KEY,
-                api_secret=CLOUDINARY_API_SECRET,
-                secure=True
-            )
-            
-            DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-            
-            CLOUDINARY_STORAGE = {
-                'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
-                'API_KEY': CLOUDINARY_API_KEY,
-                'API_SECRET': CLOUDINARY_API_SECRET,
-            }
-            
-            MEDIA_URL = '/media/'
-            
-            write_log("SUCCESS: Cloudinary configured!")
-            write_log(f"  DEFAULT_FILE_STORAGE = {DEFAULT_FILE_STORAGE}")
-            write_log(f"  Cloud URL: https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/")
-            
-        except Exception as e:
-            write_log(f"ERROR importing cloudinary: {e}")
-            MEDIA_URL = '/media/'
-            MEDIA_ROOT = BASE_DIR / 'media'
-    else:
-        write_log("ERROR: Cloudinary credentials incomplete")
-        MEDIA_URL = '/media/'
-        MEDIA_ROOT = BASE_DIR / 'media'
-else:
-    write_log(f"Local storage active (MEDIA_STORAGE = '{MEDIA_STORAGE}')")
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
-
-write_log("="*70 + "\n")
+MEDIA_URL = '/media/'
 
 # ─── Crispy Forms ─────────────────────────────────────────────────────────────
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
