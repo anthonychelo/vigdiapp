@@ -2,12 +2,15 @@ import os
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from cloudinary.models import CloudinaryField
 
 
 def profil_photo_path(instance, filename):
     """Stocke la photo de profil dans media/profiles/<user_id>/"""
     ext = os.path.splitext(filename)[1]
-    return f'profiles/{instance.id}/avatar{ext}'
+    # Utiliser username au lieu de id pour éviter les problèmes avec les nouveaux users
+    username = instance.username or 'temp'
+    return f'profiles/{username}/avatar{ext}'
 
 
 class Badge(models.Model):
@@ -67,8 +70,11 @@ class User(AbstractUser):
                                     help_text="Format : 6XXXXXXXX")
     ville        = models.CharField(max_length=100, blank=True)
     region       = models.CharField(max_length=20, choices=REGION_CHOICES, blank=True)
+    
+    # PHOTO DE PROFIL - Utilise ImageField qui sera géré par DEFAULT_FILE_STORAGE
     photo_profil = models.ImageField(upload_to=profil_photo_path, blank=True, null=True,
                                      help_text="Photo de profil de l'utilisateur")
+    
     bio          = models.TextField(max_length=300, blank=True)
 
     # Certification & badge
@@ -92,6 +98,11 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.get_full_name() or self.username}"
+
+    @property
+    def photo(self):
+        """Alias pour photo_profil - pour compatibilité avec les anciens templates"""
+        return self.photo_profil
 
     @property
     def afficher_badge(self):
