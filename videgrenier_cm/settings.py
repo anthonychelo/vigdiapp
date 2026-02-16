@@ -1,5 +1,6 @@
 """
-ViGDi – settings.py (VERSION ULTRA STABLE)
+ViGDi – settings.py (VERSION FINALE CORRIGÉE)
+Le problème était l'ordre dans INSTALLED_APPS !
 """
 from pathlib import Path
 from decouple import config, Csv
@@ -13,18 +14,20 @@ SECRET_KEY    = config('SECRET_KEY', default='django-insecure-change-me-in-produ
 DEBUG         = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='vigdiapp.onrender.com', cast=Csv())
 
-# ─── Applications ─────────────────────────────────────────────────────────────
+# ─── Applications (ORDRE CRITIQUE!) ──────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    # CLOUDINARY DOIT ÊTRE AVANT STATICFILES !
+    'cloudinary_storage',  # ← AVANT staticfiles
+    'django.contrib.staticfiles',  # ← APRÈS cloudinary_storage
+    'cloudinary',
+    # Autres apps
     'crispy_forms',
     'crispy_bootstrap5',
-    'cloudinary_storage',
-    'cloudinary',
     'accounts',
     'marketplace',
     'messaging',
@@ -108,8 +111,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ─── Stockage des médias (CLOUDINARY - ULTRA SIMPLE) ─────────────────────────
-# Configuration Cloudinary directe sans conditions
+# ─── Stockage des médias (CLOUDINARY) ────────────────────────────────────────
+# Configuration Cloudinary
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -117,13 +120,14 @@ import cloudinary.api
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'depzsog7b'),
     api_key=os.environ.get('CLOUDINARY_API_KEY', '752568181381313'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', 'ZWV7bvyW1HDyEcRJTEZO59MWjLw'),  # Mettre le vrai secret ici
     secure=True
 )
 
-# Forcer l'utilisation de Cloudinary
+# IMPORTANT : Cette ligne force Django à utiliser Cloudinary
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+# Configuration pour django-cloudinary-storage
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'depzsog7b'),
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '752568181381313'),
