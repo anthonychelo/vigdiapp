@@ -49,11 +49,11 @@ html[data-theme="light"],
     --selected-bg: #e4e4e4; /* E.g. selected table cells */
     --selected-row: #ffc;
 
-    --button-fg: #fff;
-    --button-bg: var(--secondary);
+    --button-fg: #ffffff;
+    --button-bg: #7b17d8;
     --button-hover-bg: #205067;
     --default-button-bg: #205067;
-    --default-button-hover-bg: var(--secondary);
+    --default-button-hover-bg: #7b17d8;
     --close-button-bg: #747474;
     --close-button-hover-bg: #333;
     --delete-button-bg: #ba2121;
