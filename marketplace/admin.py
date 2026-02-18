@@ -19,8 +19,7 @@ class ArticlePhotoInline(admin.TabularInline):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display   = ('vignette', 'titre', 'vendeur_badge', 'categorie',
-                       'type_transaction', 'prix_affiche', 'statut', 'vues', 'created_at')
+    list_display   = ('id')
     list_filter    = ('categorie', 'type_transaction', 'statut', 'condition')
     search_fields  = ('titre', 'vendeur__username', 'vendeur__first_name')
     list_editable  = ('statut',)
