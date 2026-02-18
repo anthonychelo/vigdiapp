@@ -1,107 +1,275 @@
-from django.contrib import admin
-from django.utils.html import format_html
-from .models import Article, ArticlePhoto, DemandeEchange, Evaluation, DemandeArticle
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from django.core.paginator import Paginator
+from .models import Article, ArticlePhoto, DemandeEchange, DemandeArticle, Evaluation
+from .forms import (ArticleForm, PhotoFormSet, DemandeEchangeForm,
+                    DemandeArticleForm, EvaluationForm)
 
 
-class ArticlePhotoInline(admin.TabularInline):
-    model  = ArticlePhoto
-    extra  = 1
-    max_num = 5
-    fields  = ('apercu_photo', 'image', 'ordre')
-    readonly_fields = ('apercu_photo',)
+def liste_articles(request):
+    """Page principale du marché avec filtres et recherche."""
+    articles = Article.objects.filter(statut='disponible').select_related('vendeur', 'vendeur__badge')
 
-    def apercu_photo(self, obj):
-        if obj.image:
-            return format_html('<img src="{}" style="height:60px;border-radius:4px;" />', obj.image.url)
-        return "—"
-    apercu_photo.short_description = "Aperçu"
+    # Filtres
+    q         = request.GET.get('q', '').strip()
+    categorie = request.GET.get('categorie', '')
+    type_tr   = request.GET.get('type', '')
+    region    = request.GET.get('region', '')
+    prix_min  = request.GET.get('prix_min', '')
+    prix_max  = request.GET.get('prix_max', '')
+    etat      = request.GET.get('etat', '')
 
+    if q:
+        # Recherche intelligente : chaque mot séparément
+        mots = q.split()
+        query = Q()
+        for mot in mots:
+            if len(mot) >= 2:  # Ignore les mots trop courts
+                query &= (
+                    Q(titre__icontains=mot) | 
+                    Q(description__icontains=mot) | 
+                    Q(ville__icontains=mot)
+                )
+        articles = articles.filter(query)
+    if categorie:
+        articles = articles.filter(categorie=categorie)
+    if type_tr:
+        articles = articles.filter(type_transaction=type_tr)
+    if region:
+        articles = articles.filter(region=region)
+    if prix_min:
+        articles = articles.filter(prix__gte=int(prix_min))
+    if prix_max:
+        articles = articles.filter(prix__lte=int(prix_max))
+    if etat:
+        articles = articles.filter(condition=etat)
 
-@admin.register(Article)
-class ArticleAdmin(admin.ModelAdmin):
-    list_display   = ('id')
-    list_filter    = ('categorie', 'type_transaction', 'statut', 'condition')
-    search_fields  = ('titre', 'vendeur__username', 'vendeur__first_name')
-    list_editable  = ('statut',)
-    inlines        = [ArticlePhotoInline]
-    readonly_fields = ('vues', 'created_at', 'updated_at')
-    ordering       = ['-created_at']
+    # Précharger les photos
+    articles = articles.prefetch_related('photos')
 
-    def vignette(self, obj):
-     try:   
-        photo = obj.photo_principale
-        if photo and hasattr(photo, 'url') and photo.url:
-            return format_html('<img src="{}" style="height:45px;width:45px;object-fit:cover;border-radius:6px;" />', photo.url)
-     except Exception:
-        
-        return "📦"
-    vignette.short_description = ""
+    paginator = Paginator(articles, 12)
+    page      = paginator.get_page(request.GET.get('page'))
 
-    def vendeur_badge(self, obj):
-        if obj.vendeur.afficher_badge:
-            return format_html('{} <b>{}</b> {}',
-                obj.vendeur.badge.icone,
-                obj.vendeur.get_full_name() or obj.vendeur.username,
-                '')
-        return obj.vendeur.get_full_name() or obj.vendeur.username
-    vendeur_badge.short_description = "Vendeur"
+    # Statistiques par catégorie (pour page d'accueil)
+    from django.db.models import Count
+    stats_categories = {}
+    if not q and not categorie and not type_tr:
+        stats = Article.objects.filter(statut='disponible').values('categorie').annotate(count=Count('id'))
+        stats_categories = {item['categorie']: item['count'] for item in stats}
 
-    def prix_affiche(self, obj):
-        if obj.type_transaction == 'don':
-            return format_html('<span style="color:#10b981;">Don gratuit</span>')
-        return format_html('{} <small>FCFA</small>', f"{obj.prix:,}".replace(',', ' '))
-    prix_affiche.short_description = "Prix"
-
-
-@admin.register(DemandeEchange)
-class DemandeEchangeAdmin(admin.ModelAdmin):
-    list_display  = ('demandeur', 'article_propose', 'apercu_livre', 'statut', 'created_at')
-    list_filter   = ('statut',)
-    list_editable = ('statut',)
-    readonly_fields = ('apercu_livre_grand', 'demandeur', 'article_propose',
-                        'titre_livre', 'description_livre', 'photo_livre',
-                        'message', 'created_at')
-
-    def apercu_livre(self, obj):
-        if obj.photo_livre:
-            return format_html('<img src="{}" style="height:50px;border-radius:4px;" />', obj.photo_livre.url)
-        return "—"
-    apercu_livre.short_description = "Photo livre proposé"
-
-    def apercu_livre_grand(self, obj):
-        if obj.photo_livre:
-            return format_html('<img src="{}" style="max-height:200px;border-radius:8px;" />', obj.photo_livre.url)
-        return "Pas de photo"
-    apercu_livre_grand.short_description = "Photo du livre proposé"
+    from accounts.models import User
+    context = {
+        'articles':            page,
+        'categories':          Article.CATEGORIE_CHOICES,
+        'types':               Article.TYPE_CHOICES,
+        'regions':             User.REGION_CHOICES,
+        'q':                   q,
+        'categorie_active':    categorie,
+        'type_actif':          type_tr,
+        'stats_categories':    stats_categories,
+        'recherches_populaires': ['iPhone', 'Samsung', 'Livres scolaires', 'Chaussures'],
+    }
+    return render(request, 'marketplace/liste.html', context)
 
 
-@admin.register(DemandeArticle)
-class DemandeArticleAdmin(admin.ModelAdmin):
-    list_display   = ('demandeur', 'nom_article', 'categorie', 'budget_max', 'statut', 'created_at')
-    list_filter    = ('statut', 'categorie')
-    search_fields  = ('nom_article', 'demandeur__username')
-    list_editable  = ('statut',)
-    readonly_fields = ('demandeur', 'nom_article', 'categorie', 'description',
-                        'budget_max', 'created_at')
-    actions = ['approuver', 'refuser']
+def detail_article(request, pk):
+    """Détail d'un article avec demande d'échange si applicable."""
+    article = get_object_or_404(
+        Article.objects.select_related('vendeur', 'vendeur__badge').prefetch_related('photos'),
+        pk=pk
+    )
+    # Incrémenter les vues
+    Article.objects.filter(pk=pk).update(vues=article.vues + 1)
 
-    @admin.action(description="✅ Approuver les demandes sélectionnées")
-    def approuver(self, request, queryset):
-        queryset.update(statut='approuvee')
+    # Demandes d'échange existantes pour cet article
+    ma_demande = None
+    form_echange = None
+    if request.user.is_authenticated and article.est_echangeable:
+        ma_demande = DemandeEchange.objects.filter(
+            article_propose=article,
+            demandeur=request.user
+        ).first()
+        if not ma_demande:
+            form_echange = DemandeEchangeForm()
 
-    @admin.action(description="❌ Refuser les demandes sélectionnées")
-    def refuser(self, request, queryset):
-        queryset.update(statut='refusee')
+    # Évaluations du vendeur
+    evaluations = Evaluation.objects.filter(vendeur=article.vendeur).order_by('-created_at')[:5]
+
+    context = {
+        'article':      article,
+        'form_echange': form_echange,
+        'ma_demande':   ma_demande,
+        'evaluations':  evaluations,
+    }
+    return render(request, 'marketplace/detail.html', context)
 
 
-@admin.register(Evaluation)
-class EvaluationAdmin(admin.ModelAdmin):
-    list_display  = ('acheteur', 'vendeur', 'note_etoiles', 'article', 'created_at')
-    list_filter   = ('note',)
-    search_fields = ('acheteur__username', 'vendeur__username')
-    readonly_fields = ('acheteur', 'vendeur', 'article', 'note', 'commentaire', 'created_at')
+@login_required
+def ajouter_article(request):
+    """Publier un nouvel article avec jusqu'à 5 photos."""
+    if request.method == 'POST':
+        form     = ArticleForm(request.POST)
+        formset  = PhotoFormSet(request.POST, request.FILES, prefix='photos')
 
-    def note_etoiles(self, obj):
-        etoiles = '⭐' * obj.note + '☆' * (5 - obj.note)
-        return format_html('<span title="{}/5">{}</span>', obj.note, etoiles)
-    note_etoiles.short_description = "Note"
+        if form.is_valid() and formset.is_valid():
+            article          = form.save(commit=False)
+            article.vendeur  = request.user
+            article.ville    = article.ville or request.user.ville
+            article.region   = article.region or request.user.region
+            article.save()
+
+            # Sauvegarder les photos
+            photos = formset.save(commit=False)
+            for i, photo in enumerate(photos):
+                photo.article = article
+                photo.ordre   = i
+                photo.save()
+
+            messages.success(request, "Votre article a été publié avec succès !")
+            return redirect('marketplace:detail', pk=article.pk)
+    else:
+        form    = ArticleForm()
+        formset = PhotoFormSet(prefix='photos')
+
+    return render(request, 'marketplace/ajouter.html', {
+        'form': form, 'formset': formset
+    })
+
+
+@login_required
+def modifier_article(request, pk):
+    """Modifier son article."""
+    article = get_object_or_404(Article, pk=pk, vendeur=request.user)
+
+    if request.method == 'POST':
+        form    = ArticleForm(request.POST, instance=article)
+        formset = PhotoFormSet(request.POST, request.FILES,
+                                instance=article, prefix='photos')
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.success(request, "Article modifié !")
+            return redirect('marketplace:detail', pk=article.pk)
+    else:
+        form    = ArticleForm(instance=article)
+        formset = PhotoFormSet(instance=article, prefix='photos')
+
+    return render(request, 'marketplace/modifier.html', {
+        'form': form, 'formset': formset, 'article': article
+    })
+
+
+@login_required
+def supprimer_article(request, pk):
+    article = get_object_or_404(Article, pk=pk, vendeur=request.user)
+    if request.method == 'POST':
+        article.statut = 'retire'
+        article.save()
+        messages.success(request, "Article retiré du marché.")
+        return redirect('accounts:profil')
+    return render(request, 'marketplace/confirmer_suppression.html', {'article': article})
+
+
+@login_required
+def demande_echange(request, article_pk):
+    """Soumettre une demande d'échange avec photo du livre proposé."""
+    article = get_object_or_404(Article, pk=article_pk, type_transaction='echanger',
+                                 statut='disponible')
+
+    if article.vendeur == request.user:
+        messages.error(request, "Vous ne pouvez pas échanger votre propre article.")
+        return redirect('marketplace:detail', pk=article_pk)
+
+    # Vérifier demande existante
+    if DemandeEchange.objects.filter(article_propose=article,
+                                      demandeur=request.user,
+                                      statut='en_attente').exists():
+        messages.info(request, "Vous avez déjà une demande en attente pour cet article.")
+        return redirect('marketplace:detail', pk=article_pk)
+
+    if request.method == 'POST':
+        form = DemandeEchangeForm(request.POST, request.FILES)
+        if form.is_valid():
+            demande = form.save(commit=False)
+            demande.article_propose = article
+            demande.demandeur       = request.user
+            demande.save()
+            messages.success(request,
+                "Votre proposition d'échange a été envoyée au vendeur !")
+            return redirect('marketplace:detail', pk=article_pk)
+    else:
+        form = DemandeEchangeForm()
+
+    return render(request, 'marketplace/demande_echange.html', {
+        'form': form, 'article': article
+    })
+
+
+@login_required
+def mes_demandes_echange(request):
+    """Voir les demandes d'échange reçues (côté vendeur) et envoyées."""
+    demandes_recues  = DemandeEchange.objects.filter(
+        article_propose__vendeur=request.user
+    ).select_related('demandeur', 'demandeur__badge', 'article_propose')
+
+    demandes_envoyees = DemandeEchange.objects.filter(
+        demandeur=request.user
+    ).select_related('article_propose', 'article_propose__vendeur')
+
+    return render(request, 'marketplace/mes_demandes.html', {
+        'demandes_recues':  demandes_recues,
+        'demandes_envoyees': demandes_envoyees,
+    })
+
+
+@login_required
+def repondre_echange(request, demande_pk, action):
+    """Vendeur accepte ou refuse une demande d'échange."""
+    demande = get_object_or_404(
+        DemandeEchange,
+        pk=demande_pk,
+        article_propose__vendeur=request.user,
+        statut='en_attente'
+    )
+    if action == 'accepter':
+        demande.statut = 'acceptee'
+        demande.article_propose.statut = 'vendu'
+        demande.article_propose.save()
+        # Incrémenter les échanges
+        request.user.nb_echanges += 1
+        request.user.save(update_fields=['nb_echanges'])
+        messages.success(request, "Échange accepté ! Contactez le demandeur.")
+    elif action == 'refuser':
+        demande.statut = 'refusee'
+        messages.info(request, "Demande refusée.")
+    demande.save()
+    return redirect('marketplace:mes_demandes')
+
+
+@login_required
+def demande_article(request):
+    """L'utilisateur demande à l'admin d'ajouter un article."""
+    if request.method == 'POST':
+        form = DemandeArticleForm(request.POST)
+        if form.is_valid():
+            demande             = form.save(commit=False)
+            demande.demandeur   = request.user
+            demande.save()
+            messages.success(request,
+                "Votre demande a été envoyée à l'admin. "
+                "Il sera notifié prochainement."
+            )
+            return redirect('marketplace:liste')
+    else:
+        form = DemandeArticleForm()
+
+    mes_demandes = DemandeArticle.objects.filter(
+        demandeur=request.user
+    ).order_by('-created_at')
+
+    return render(request, 'marketplace/demande_article.html', {
+        'form': form,
+        'mes_demandes': mes_demandes,
+    })
