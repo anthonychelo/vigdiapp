@@ -29,9 +29,12 @@ class ArticleAdmin(admin.ModelAdmin):
     ordering       = ['-created_at']
 
     def vignette(self, obj):
+     try:   
         photo = obj.photo_principale
-        if photo:
+        if photo and hasattr(photo, 'url') and photo.url:
             return format_html('<img src="{}" style="height:45px;width:45px;object-fit:cover;border-radius:6px;" />', photo.url)
+     except Exception:
+        
         return "📦"
     vignette.short_description = ""
 
