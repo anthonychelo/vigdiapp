@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Assistant Prix IA – ViGDi{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:600px;">
+
+  <!-- En-tête -->
+  <div class="text-center mb-4">
+    <div class="mb-3" style="font-size:3rem;">🤖</div>
+    <h3 class="fw-bold">Assistant Prix ViGDi</h3>
+    <p class="text-muted">Analyse intelligente de ton article</p>
+  </div>
+
+  <!-- Récapitulatif article -->
+  <div class="vigdi-card mb-3">
+    <h6 class="fw-bold mb-3">📦 Ton article</h6>
+    <div class="row g-2 small">
+      <div class="col-4 text-muted">Titre :</div>
+      <div class="col-8 fw-medium">{{ draft.titre }}</div>
+      
+      <div class="col-4 text-muted">Catégorie :</div>
+      <div class="col-8">{{ draft.categorie }}</div>
+      
+      <div class="col-4 text-muted">État :</div>
+      <div class="col-8">
+        {% if draft.condition == 'neuf' %}Neuf
+        {% elif draft.condition == 'tres_bon' %}Très bon état
+        {% elif draft.condition == 'bon' %}Bon état
+        {% elif draft.condition == 'moyen' %}État moyen
+        {% else %}À réparer{% endif %}
+      </div>
+      
+      <div class="col-4 text-muted">Ton prix :</div>
+      <div class="col-8 fw-bold" style="color:var(--primary);">{{ prix_initial|floatformat:"0" }} FCFA</div>
+    </div>
+  </div>
+
+  <!-- Analyse du marché -->
+  <div class="vigdi-card mb-3">
+    <h6 class="fw-bold mb-3">📊 Analyse du marché</h6>
+    
+    {% if nb_articles_similaires > 0 %}
+      <p class="small mb-2">
+        <i class="bi bi-info-circle text-primary me-1"></i>
+        Basé sur <strong>{{ nb_articles_similaires }}</strong> article{{ nb_articles_similaires|pluralize }} similaire{{ nb_articles_similaires|pluralize }}
+      </p>
+      
+      <div class="mb-3">
+        <div class="d-flex justify-content-between small text-muted mb-1">
+          <span>Prix min</span>
+          <span>Prix max</span>
+        </div>
+        <div class="progress" style="height:8px;background:#e5e7eb;">
+          <div class="progress-bar" style="width:100%;background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444);"></div>
+        </div>
+        <div class="d-flex justify-content-between small mt-1">
+          <span class="fw-medium">{{ prix_marche_min|floatformat:"0" }} F</span>
+          <span class="fw-medium">{{ prix_marche_max|floatformat:"0" }} F</span>
+        </div>
+      </div>
+    {% else %}
+      <p class="small text-muted mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Peu d'articles similaires. Estimation basée sur la catégorie et l'état.
+      </p>
+    {% endif %}
+
+    <!-- Alerte -->
+    <div class="alert alert-{{ niveau_alerte }} mb-0" style="border-radius:12px;">
+      <div class="d-flex align-items-center gap-2">
+        {% if niveau_alerte == 'warning' %}
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        {% elif niveau_alerte == 'success' %}
+          <i class="bi bi-check-circle-fill"></i>
+        {% else %}
+          <i class="bi bi-info-circle-fill"></i>
+        {% endif %}
+        <div class="flex-fill">
+          <div class="fw-bold small">{{ message_alerte }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommandation IA -->
+  <div class="vigdi-card mb-3" style="border:2px solid var(--primary);background:var(--primary-light);">
+    <div class="text-center">
+      <p class="small text-muted mb-2">💡 Prix recommandé</p>
+      <div class="display-6 fw-bold mb-2" style="color:var(--primary);">
+        {{ prix_recommande|floatformat:"0" }} FCFA
+      </div>
+      
+      <div class="row g-3 mt-2">
+        <div class="col-6">
+          <div class="small text-muted">Chance de vente</div>
+          <div class="fw-bold">{{ chance_vente }}%</div>
+        </div>
+        <div class="col-6">
+          <div class="small text-muted">Délai estimé</div>
+          <div class="fw-bold">{{ delai_vente }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Options vendeur -->
+  <div class="vigdi-card mb-3">
+    <h6 class="fw-bold mb-3">🎯 Que veux-tu faire ?</h6>
+    
+    <form method="post" action="{% url 'marketplace:confirmer_article' %}">
+      {% csrf_token %}
+      
+      <!-- Option 1 : Prix IA -->
+      <div class="form-check mb-3 p-3" style="border:2px solid var(--primary);border-radius:12px;background:var(--primary-light);">
+        <input class="form-check-input" type="radio" name="prix_final" 
+               value="{{ prix_recommande }}" id="prix-ia" checked>
+        <label class="form-check-label fw-bold w-100" for="prix-ia">
+          <div class="d-flex justify-content-between align-items-center">
+            <span>✅ Utiliser le prix recommandé</span>
+            <span class="badge bg-success">Recommandé</span>
+          </div>
+          <div class="small text-muted mt-1">
+            {{ prix_recommande|floatformat:"0" }} FCFA · Vente probable en {{ delai_vente }}
+          </div>
+        </label>
+      </div>
+
+      <!-- Option 2 : Prix initial -->
+      <div class="form-check mb-3 p-3" style="border:1px solid #e5e7eb;border-radius:12px;">
+        <input class="form-check-input" type="radio" name="prix_final" 
+               value="{{ prix_initial }}" id="prix-initial">
+        <label class="form-check-label fw-bold w-100" for="prix-initial">
+          <div>Garder mon prix</div>
+          <div class="small text-muted mt-1">
+            {{ prix_initial|floatformat:"0" }} FCFA
+          </div>
+        </label>
+      </div>
+
+      <!-- Option 3 : Prix personnalisé -->
+      <div class="form-check mb-4 p-3" style="border:1px solid #e5e7eb;border-radius:12px;">
+        <input class="form-check-input" type="radio" name="prix_final_radio" 
+               value="custom" id="prix-custom">
+        <label class="form-check-label fw-bold w-100" for="prix-custom">
+          <div class="mb-2">Fixer un autre prix</div>
+          <input type="number" name="prix_custom" class="form-control" 
+                 placeholder="Entrer un montant..." 
+                 onfocus="document.getElementById('prix-custom').checked=true"
+                 onchange="if(this.value) this.form.prix_final.value=this.value">
+        </label>
+      </div>
+
+      <!-- Boutons -->
+      <div class="d-flex gap-2">
+        <a href="{% url 'marketplace:ajouter' %}" class="btn btn-outline-secondary flex-fill">
+          <i class="bi bi-arrow-left me-1"></i> Retour
+        </a>
+        <button type="submit" class="btn btn-vigdi flex-fill">
+          Publier l'article <i class="bi bi-check-lg ms-1"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Info supplémentaire -->
+  <div class="text-center text-muted small">
+    <i class="bi bi-info-circle"></i>
+    Tu pourras toujours modifier le prix après publication
+  </div>
+
+</div>
+
+<script>
+// Gérer le prix personnalisé
+document.addEventListener('DOMContentLoaded', () => {
+  const customInput = document.querySelector('input[name="prix_custom"]');
+  const customRadio = document.getElementById('prix-custom');
+  const finalInput = document.querySelector('input[name="prix_final"]');
+  
+  customInput.addEventListener('input', () => {
+    customRadio.checked = true;
+    if (customInput.value) {
+      // Créer un input caché pour le prix custom
+      let hiddenInput = document.querySelector('input[name="prix_final"][type="hidden"]');
+      if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'prix_final';
+        customInput.form.appendChild(hiddenInput);
+      }
+      hiddenInput.value = customInput.value;
+    }
+  });
+});
+</script>
+{% endblock %}

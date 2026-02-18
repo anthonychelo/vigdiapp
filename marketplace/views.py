@@ -80,37 +80,156 @@ def detail_article(request, pk):
     return render(request, 'marketplace/detail.html', context)
 
 
+# À ajouter dans marketplace/views.py
+
 @login_required
 def ajouter_article(request):
-    """Publier un nouvel article avec jusqu'à 5 photos."""
+    """Publier un nouvel article - Étape 1 : Formulaire."""
     if request.method == 'POST':
-        form     = ArticleForm(request.POST)
-        formset  = PhotoFormSet(request.POST, request.FILES, prefix='photos')
+        form = ArticleForm(request.POST)
+        formset = PhotoFormSet(request.POST, request.FILES, prefix='photos')
 
         if form.is_valid() and formset.is_valid():
-            article          = form.save(commit=False)
-            article.vendeur  = request.user
-            article.ville    = article.ville or request.user.ville
-            article.region   = article.region or request.user.region
-            article.save()
-
-            # Sauvegarder les photos
-            photos = formset.save(commit=False)
-            for i, photo in enumerate(photos):
-                photo.article = article
-                photo.ordre   = i
-                photo.save()
-
-            messages.success(request, "Votre article a été publié avec succès !")
-            return redirect('marketplace:detail', pk=article.pk)
+            # Sauvegarder temporairement dans la session
+            request.session['article_draft'] = {
+                'titre': form.cleaned_data['titre'],
+                'description': form.cleaned_data['description'],
+                'prix': str(form.cleaned_data['prix']),
+                'categorie': form.cleaned_data['categorie'],
+                'condition': form.cleaned_data['condition'],
+                'type_transaction': form.cleaned_data['type_transaction'],
+                'ville': form.cleaned_data.get('ville', ''),
+                'region': form.cleaned_data.get('region', ''),
+            }
+            
+            # Sauvegarder les photos temporairement
+            request.session['photos_count'] = len([p for p in formset.cleaned_data if p])
+            
+            # Rediriger vers l'assistant IA
+            return redirect('marketplace:ai_pricing')
     else:
-        form    = ArticleForm()
+        form = ArticleForm()
         formset = PhotoFormSet(prefix='photos')
 
     return render(request, 'marketplace/ajouter.html', {
         'form': form, 'formset': formset
     })
 
+
+@login_required
+def ai_pricing_suggestion(request):
+    """Étape 2 : Analyse IA et suggestion de prix."""
+    draft = request.session.get('article_draft')
+    if not draft:
+        messages.warning(request, "Session expirée, veuillez recommencer.")
+        return redirect('marketplace:ajouter')
+    
+    # Algorithme de pricing IA
+    from django.db.models import Avg
+    prix_initial = int(draft['prix'])
+    categorie = draft['categorie']
+    condition = draft['condition']
+    
+    # Récupérer articles similaires
+    articles_similaires = Article.objects.filter(
+        categorie=categorie,
+        statut='disponible'
+    ).exclude(prix=0)
+    
+    # Calculer prix moyen du marché
+    if articles_similaires.exists():
+        prix_moyen = articles_similaires.aggregate(Avg('prix'))['prix__avg'] or 0
+        prix_min = articles_similaires.order_by('prix').first().prix
+        prix_max = articles_similaires.order_by('-prix').first().prix
+    else:
+        # Pas de données, estimation basique
+        prix_moyen = prix_initial * 0.75
+        prix_min = prix_initial * 0.60
+        prix_max = prix_initial * 0.90
+    
+    # Ajustement selon l'état
+    facteur_etat = {
+        'neuf': 1.0,
+        'tres_bon': 0.85,
+        'bon': 0.70,
+        'moyen': 0.55,
+        'reparer': 0.35
+    }
+    prix_recommande = int(prix_moyen * facteur_etat.get(condition, 0.70))
+    
+    # Analyse : comparaison avec le prix initial
+    diff_pourcent = ((prix_initial - prix_recommande) / prix_recommande * 100) if prix_recommande > 0 else 0
+    
+    if diff_pourcent > 20:
+        niveau_alerte = 'warning'
+        message_alerte = f"Ton prix est {int(diff_pourcent)}% au-dessus du marché"
+        chance_vente = 35
+        delai_vente = "15+ jours"
+    elif diff_pourcent > 10:
+        niveau_alerte = 'info'
+        message_alerte = f"Ton prix est {int(diff_pourcent)}% au-dessus du marché"
+        chance_vente = 60
+        delai_vente = "7-10 jours"
+    elif diff_pourcent < -10:
+        niveau_alerte = 'success'
+        message_alerte = "Excellent prix ! Vente rapide probable"
+        chance_vente = 90
+        delai_vente = "2-3 jours"
+    else:
+        niveau_alerte = 'success'
+        message_alerte = "Prix dans la moyenne du marché"
+        chance_vente = 75
+        delai_vente = "3-5 jours"
+    
+    context = {
+        'draft': draft,
+        'prix_initial': prix_initial,
+        'prix_recommande': prix_recommande,
+        'prix_marche_min': int(prix_min),
+        'prix_marche_max': int(prix_max),
+        'nb_articles_similaires': articles_similaires.count(),
+        'niveau_alerte': niveau_alerte,
+        'message_alerte': message_alerte,
+        'chance_vente': chance_vente,
+        'delai_vente': delai_vente,
+    }
+    return render(request, 'marketplace/ai_pricing.html', context)
+
+
+@login_required
+def confirmer_article(request):
+    """Étape 3 : Confirmation et publication finale."""
+    draft = request.session.get('article_draft')
+    if not draft or request.method != 'POST':
+        return redirect('marketplace:ajouter')
+    
+    # Récupérer le prix choisi (IA ou initial)
+    prix_final = request.POST.get('prix_final')
+    if not prix_final:
+        messages.error(request, "Prix manquant")
+        return redirect('marketplace:ai_pricing')
+    
+    # Créer l'article
+    article = Article(
+        vendeur=request.user,
+        titre=draft['titre'],
+        description=draft['description'],
+        prix=int(prix_final),
+        categorie=draft['categorie'],
+        condition=draft['condition'],
+        type_transaction=draft['type_transaction'],
+        ville=draft['ville'] or request.user.ville,
+        region=draft['region'] or request.user.region,
+    )
+    article.save()
+    
+    # Nettoyer la session
+    del request.session['article_draft']
+    if 'photos_count' in request.session:
+        del request.session['photos_count']
+    
+    messages.success(request, "🎉 Article publié avec succès !")
+    return redirect('marketplace:detail', pk=article.pk)
 
 @login_required
 def modifier_article(request, pk):

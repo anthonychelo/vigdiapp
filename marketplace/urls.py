@@ -15,4 +15,6 @@ urlpatterns = [
     path('echange/<int:demande_pk>/<str:action>/', views.repondre_echange, name='repondre_echange'),
     # Demande d'article à l'admin
     path('demander-article/',                 views.demande_article,   name='demande_article'),
+     path('ai-pricing/', views.ai_pricing_suggestion, name='ai_pricing'),
+    path('confirmer/', views.confirmer_article, name='confirmer_article'),
 ]
