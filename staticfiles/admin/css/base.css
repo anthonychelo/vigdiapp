@@ -50,10 +50,10 @@ html[data-theme="light"],
     --selected-row: #ffc;
 
     --button-fg: #ffffff;
-    --button-bg: #7b17d8;
+    --button-bg: var(--secondary);
     --button-hover-bg: #205067;
     --default-button-bg: #205067;
-    --default-button-hover-bg: #7b17d8;
+    --default-button-hover-bg: var(--secondary);
     --close-button-bg: #747474;
     --close-button-hover-bg: #333;
     --delete-button-bg: #ba2121;

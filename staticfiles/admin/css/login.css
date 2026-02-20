@@ -59,18 +59,4 @@
 .login .password-reset-link {
     text-align: center;
 }
-/* NAVBAR LOGIN BUTTON */
 
-.login-btn {
-    background-color: #1877f2;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    display: inline-block;
-}
-
-.login-btn:hover {
-    background-color: #166fe0;
-}
